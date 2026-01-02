@@ -1,0 +1,38 @@
+[
+    {
+        "identificador": "3",
+        "titulo": "Nueva",
+        "descripcion": "Desc",
+        "prioridad": "alta",
+        "horas_estimadas": 2.0,
+        "estado": "pendiente",
+        "asignado_a": "Guillermo"
+    },
+    {
+        "identificador": "4",
+        "titulo": "Definir prioridades",
+        "descripcion": "Establecimiento de tiempos",
+        "prioridad": "alta",
+        "horas_estimadas": 6.5,
+        "estado": "En proceso",
+        "asignado_a": "Guillermo Ramírez"
+    },
+    {
+        "identificador": "5",
+        "titulo": "Nueva tarea",
+        "descripcion": "Creada desde POST",
+        "prioridad": "media",
+        "horas_estimadas": 2.5,
+        "estado": "pendiente",
+        "asignado_a": "Guillermo"
+    },
+    {
+        "identificador": "6",
+        "titulo": "Nueva tarea",
+        "descripcion": "Creada desde POST",
+        "prioridad": "media",
+        "horas_estimadas": 2.5,
+        "estado": "pendiente",
+        "asignado_a": "Guillermo"
+    }
+]
