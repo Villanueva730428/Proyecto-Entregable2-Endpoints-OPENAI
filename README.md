@@ -59,6 +59,37 @@ Qué va en cada carpeta:
 
 ---
 
+## Arquitectura
+
+Arquitectura simple en capas (sin patrones avanzados):
+
+- **Aplicación**: `app.py`
+  - Crea la instancia de Flask.
+  - Registra el Blueprint de tareas.
+
+- **Rutas (API)**: `rutas/rutas_tareas.py`
+  - Define endpoints HTTP (GET/POST/PUT/DELETE).
+  - No contiene lógica de persistencia; delega a `GestorTareas`.
+  - Convierte `Tarea` ↔ diccionario para responder JSON.
+
+- **Modelo**: `modelos/tarea.py`
+  - Representa la entidad `Tarea`.
+  - Provee `a_diccionario()` y `desde_diccionario()`.
+
+- **Servicio de persistencia**: `servicios/gestor_tareas.py`
+  - Lee y escribe en `datos/tareas.json`.
+  - Devuelve/recibe listas de objetos `Tarea`.
+  - Maneja archivo inexistente y JSON vacío/inválido devolviendo lista vacía.
+
+Flujo típico de una petición:
+
+1) Cliente HTTP → endpoint en `rutas/rutas_tareas.py`
+2) Ruta llama a `GestorTareas.cargar_tareas()` o `GestorTareas.guardar_tareas(...)`
+3) `GestorTareas` lee/escribe `datos/tareas.json` y trabaja con objetos `Tarea`
+4) Ruta convierte a diccionarios con `a_diccionario()` y responde JSON
+
+---
+
 ## Instalación
 
 > Recomendado: usar entorno virtual `venv`.
