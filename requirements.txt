@@ -3,3 +3,4 @@
 # En pasos posteriores se añadirá Flask y cualquier dependencia necesaria.
 
 Flask>=3.0
+openai

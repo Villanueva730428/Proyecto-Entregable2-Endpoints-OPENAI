@@ -1,237 +1,384 @@
-# API REST de gestión de tareas (Flask)
+# API REST de Gestión de Tareas + Extensión IA (OpenAI)
 
-Proyecto en **Python 3.12** y **Flask** para gestionar tareas asignadas a usuarios, usando un archivo **JSON** como almacenamiento.
+Proyecto en **Python 3.12** y **Flask** que implementa un CRUD de tareas (Entregable 1) y lo extiende con endpoints de IA (Entregable 2) siguiendo la guía de:
 
-Este repositorio se desarrolla de forma incremental siguiendo las reglas definidas en `agents.md`.
+- [agents_core.md](agents_core.md) — base del proyecto (CRUD + JSON).
+- [agents_ai.md](agents_ai.md) — **extensión** del core con IA (sin romper el CRUD).
 
----
+## Alcance y reglas del Entregable 2 (IA)
 
-## Objetivo
+Esta extensión agrega endpoints bajo `/ai/*` con estas reglas:
 
-Construir una API REST en Flask para la gestión de tareas:
-- Crear tareas
-- Consultar tareas
-- Actualizar tareas
-- Eliminar tareas
+- No rompe ni modifica el comportamiento del CRUD existente.
+- La IA **solo completa campos**; por defecto **NO persiste** en `datos/tareas.json`.
+- Credenciales **solo por variables de entorno** (no se versionan secretos).
+- Todo el código en español, `snake_case`, sin abreviaturas.
 
-Persistencia:
-- Las tareas se guardan en `datos/tareas.json`
+## Funcionalidades implementadas
 
----
+### Entregable 1 (core)
 
-## Reglas de nombrado (obligatorias)
+- CRUD REST de tareas persistidas en [datos/tareas.json](datos/tareas.json).
+- Modelo `Tarea` con serialización/deserialización.
 
-Según `agents.md`, todo el código del proyecto debe:
-- Estar en **español**
-- Usar **snake_case**
-- **No** usar abreviaturas
-- Preferir claridad sobre brevedad
+### Entregable 2 (extensión IA)
 
----
-
-## Estructura del proyecto
-
-Estructura esperada (según `agents.md`):
-
-```
-proyecto/
-├── app.py
-├── rutas/
-│   └── rutas_tareas.py
-├── modelos/
-│   └── tarea.py
-├── servicios/
-│   └── gestor_tareas.py
-├── datos/
-│   └── tareas.json
-├── documentos/
-│   └── imagenes_postman/
-├── venv/
-└── requirements.txt
-```
-
-Qué va en cada carpeta:
-- `modelos/`: clases del dominio (por ejemplo, `Tarea`).
-- `servicios/`: persistencia y lógica de acceso a datos (por ejemplo, `GestorTareas`).
-- `rutas/`: endpoints Flask (Blueprints).
-- `datos/`: almacenamiento local en JSON.
-- `documentos/`: evidencias (capturas de Postman).
-
----
+- Extensión del modelo `Tarea` con nuevos campos opcionales.
+- Servicio IA aislado en [servicios/servicio_ia.py](servicios/servicio_ia.py).
+- Blueprint IA con endpoints en [rutas/rutas_ai.py](rutas/rutas_ai.py).
+- Integración con **OpenAI** como proveedor vía SDK oficial.
 
 ## Arquitectura
 
-Arquitectura simple en capas (sin patrones avanzados):
+Arquitectura simple en capas (sin patrones avanzados), alineada con las guías del core y su extensión IA:
 
-- **Aplicación**: `app.py`
-  - Crea la instancia de Flask.
-  - Registra el Blueprint de tareas.
+- **Aplicación**: [app.py](app.py)
+  - Crea la instancia Flask.
+  - Registra Blueprints:
+    - CRUD: [rutas/rutas_tareas.py](rutas/rutas_tareas.py)
+    - IA: [rutas/rutas_ai.py](rutas/rutas_ai.py)
 
-- **Rutas (API)**: `rutas/rutas_tareas.py`
-  - Define endpoints HTTP (GET/POST/PUT/DELETE).
-  - No contiene lógica de persistencia; delega a `GestorTareas`.
-  - Convierte `Tarea` ↔ diccionario para responder JSON.
+- **Rutas (API)**:
+  - [rutas/rutas_tareas.py](rutas/rutas_tareas.py): endpoints CRUD que persisten en JSON.
+  - [rutas/rutas_ai.py](rutas/rutas_ai.py): endpoints `/ai/*` que enriquecen una tarea (no persisten por defecto).
 
-- **Modelo**: `modelos/tarea.py`
-  - Representa la entidad `Tarea`.
-  - Provee `a_diccionario()` y `desde_diccionario()`.
+- **Servicios**:
+  - [servicios/gestor_tareas.py](servicios/gestor_tareas.py): lectura/escritura de [datos/tareas.json](datos/tareas.json).
+  - [servicios/servicio_ia.py](servicios/servicio_ia.py): prompts + llamadas a OpenAI + normalización de salidas.
 
-- **Servicio de persistencia**: `servicios/gestor_tareas.py`
-  - Lee y escribe en `datos/tareas.json`.
-  - Devuelve/recibe listas de objetos `Tarea`.
-  - Maneja archivo inexistente y JSON vacío/inválido devolviendo lista vacía.
+- **Modelos**:
+  - [modelos/tarea.py](modelos/tarea.py): entidad `Tarea` y conversiones `a_diccionario()` / `desde_diccionario()`.
 
-Flujo típico de una petición:
+Flujo típico:
 
-1) Cliente HTTP → endpoint en `rutas/rutas_tareas.py`
-2) Ruta llama a `GestorTareas.cargar_tareas()` o `GestorTareas.guardar_tareas(...)`
-3) `GestorTareas` lee/escribe `datos/tareas.json` y trabaja con objetos `Tarea`
-4) Ruta convierte a diccionarios con `a_diccionario()` y responde JSON
+1) Cliente HTTP → endpoint (ruta)
+2) Ruta valida JSON mínimo
+3) Ruta delega a servicio (persistencia o IA)
+4) Ruta devuelve JSON
 
----
+## Modelo de datos: `Tarea`
 
-## Instalación
+Campos existentes (core):
 
-> Recomendado: usar entorno virtual `venv`.
+- `identificador`
+- `titulo`
+- `descripcion`
+- `prioridad`
+- `horas_estimadas`
+- `estado`
+- `asignado_a`
 
-1) Crear entorno virtual (si no existe):
+Campos nuevos (IA, Entregable 2):
 
-```powershell
-python -m venv venv
-```
+- `categoria` (opcional)
+- `analisis_riesgo` (opcional)
+- `mitigacion_riesgo` (opcional)
 
-2) Activar entorno virtual:
+Compatibilidad:
+- Tareas antiguas pueden no incluir estos campos.
+- La carga desde JSON aplica valores por defecto cuando falten.
 
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\venv\Scripts\Activate.ps1
-```
+## Endpoints expuestos
 
-3) Instalar dependencias:
+Base (CRUD):
 
-```powershell
-pip install -r requirements.txt
-```
-
----
-
-## Ejecución
-
-Levantar la API:
-
-```powershell
-python app.py
-```
-
-Rutas disponibles:
-- `GET /` (verificación simple)
+- `GET /` (verificación rápida)
 - `GET /tareas`
 - `GET /tareas/<identificador>`
 - `POST /tareas`
 - `PUT /tareas/<identificador>`
 - `DELETE /tareas/<identificador>`
 
----
+IA (Entregable 2):
 
-## Endpoints
+- `POST /ai/tareas/describe`
+  - Completa `descripcion` si viene vacía.
+- `POST /ai/tareas/categorize`
+  - Completa `categoria` si viene vacía.
+  - Categorías controladas: `Frontend`, `Backend`, `Testing`, `Infra`, `DevOps`, `Documentación`, `Seguridad`, `Datos`, `Otro`.
+- `POST /ai/tareas/estimate`
+  - Completa `horas_estimadas` si viene vacío/ausente.
+  - Parseo obligatorio del primer número a `float`.
+- `POST /ai/tareas/audit`
+  - Completa `analisis_riesgo` y `mitigacion_riesgo` si vienen vacíos.
+  - Flujo de **dos llamadas**: (1) análisis → (2) mitigación usando el análisis.
 
-### GET /tareas
-Devuelve la lista completa de tareas almacenadas.
+## Detalle de endpoints
 
-### GET /tareas/<identificador>
-Devuelve una tarea por identificador (si existe).
+Convenciones generales:
 
-### POST /tareas
-Crea una tarea.
+- Requests y responses son JSON.
+- Si el body no es JSON (o no es un objeto), se responde `400`.
+- En endpoints IA, si el campo objetivo ya viene con contenido, se devuelve `200` sin cambios.
 
-Body JSON requerido:
+### `GET /`
 
-```json
-{
-  "titulo": "Nueva",
-  "descripcion": "Desc",
-  "prioridad": "alta",
-  "horas_estimadas": 2,
-  "estado": "pendiente",
-  "asignado_a": "Guillermo"
-}
-```
+Propósito: verificar que la aplicación está levantada.
 
-Respuesta:
-- `201` con la tarea creada.
+- Respuesta `200`:
+  - `{"estado":"aplicacion_en_ejecucion"}`
 
-### PUT /tareas/<identificador>
-Actualiza parcialmente una tarea.
+### `GET /tareas`
+
+Propósito: listar todas las tareas persistidas.
+
+- Respuesta `200`: lista de tareas.
+
+### `GET /tareas/<identificador>`
+
+Propósito: obtener una tarea por identificador.
+
+- Respuesta `200`: tarea encontrada.
+- Respuesta `404`: si no existe.
+
+### `POST /tareas`
+
+Propósito: crear una tarea y guardarla en JSON.
+
+- Body: JSON con campos del modelo (según validaciones del CRUD).
+- Respuesta `201`: tarea creada.
+- Respuesta `400`: JSON inválido o campos requeridos ausentes.
+
+### `PUT /tareas/<identificador>`
+
+Propósito: actualizar una tarea existente (parcialmente) y persistir.
+
+- Respuesta `200`: tarea actualizada.
+- Respuesta `404`: si no existe.
+- Respuesta `400`: JSON inválido.
+
+### `DELETE /tareas/<identificador>`
+
+Propósito: eliminar una tarea por identificador.
+
+- Respuesta `200`: tarea eliminada.
+- Respuesta `404`: si no existe.
+
+### `POST /ai/tareas/describe`
+
+Propósito: completar `descripcion` cuando venga vacía.
+
+- Requiere: `titulo`.
+- No persiste en `datos/tareas.json`.
+- Respuesta `200`: devuelve la misma tarea con `descripcion` completada.
+- Respuesta `400`: JSON inválido o falta `titulo`.
+- Respuesta `500`: fallo controlado al consultar OpenAI.
 
 Ejemplo de body:
 
 ```json
 {
-  "titulo": "Título actualizado"
+  "titulo": "Implementar endpoint de listado",
+  "descripcion": "",
+  "prioridad": "Media",
+  "estado": "pendiente",
+  "asignado_a": "Guillermo"
 }
 ```
 
-Respuesta:
-- `200` con la tarea actualizada.
-- `404` si no existe.
+### `POST /ai/tareas/categorize`
 
-### DELETE /tareas/<identificador>
-Elimina una tarea.
+Propósito: completar `categoria` cuando venga vacía.
 
-Respuesta:
-- `200` si se eliminó.
-- `404` si no existe.
+- Requiere: `titulo` (y opcionalmente `descripcion`).
+- No persiste en `datos/tareas.json`.
+- Respuesta `200`: devuelve la tarea con `categoria` completada.
+- Respuesta `400`: JSON inválido o falta `titulo`.
+- Respuesta `500`: fallo controlado al consultar OpenAI.
+
+Nota: la categoría se normaliza para caer siempre en la lista controlada.
+
+Ejemplo de body:
+
+```json
+{
+  "titulo": "Crear pruebas unitarias del gestor",
+  "descripcion": "Agregar pruebas para carga/guardado de JSON",
+  "categoria": ""
+}
+```
+
+### `POST /ai/tareas/estimate`
+
+Propósito: completar `horas_estimadas` cuando venga ausente/vacía.
+
+- Requiere: `titulo` (idealmente también `descripcion`).
+- No persiste en `datos/tareas.json`.
+- Respuesta `200`: devuelve la tarea con `horas_estimadas` como número (`float`).
+- Respuesta `400`: JSON inválido, falta `titulo`, o la respuesta de IA no se pudo parsear a número.
+- Respuesta `500`: fallo controlado al consultar OpenAI.
+
+Ejemplo de body:
+
+```json
+{
+  "titulo": "Implementar endpoint POST /tareas",
+  "descripcion": "Crear endpoint, validar campos y guardar en JSON",
+  "categoria": "Backend",
+  "horas_estimadas": null
+}
+```
+
+### `POST /ai/tareas/audit`
+
+Propósito: completar `analisis_riesgo` y `mitigacion_riesgo` cuando vengan vacíos.
+
+- Requiere: `titulo`.
+- No persiste en `datos/tareas.json`.
+- Flujo:
+  1) Genera `analisis_riesgo` (si falta)
+  2) Genera `mitigacion_riesgo` usando la tarea + el análisis (si falta)
+- Respuesta `200`: devuelve la tarea con campos completados.
+- Respuesta `400`: JSON inválido o falta `titulo`.
+- Respuesta `500`: fallo controlado al consultar OpenAI.
+
+Ejemplo de body:
+
+```json
+{
+  "titulo": "Migrar base de datos a un nuevo servidor",
+  "descripcion": "Mover PostgreSQL a nueva VM y actualizar credenciales",
+  "prioridad": "Alta",
+  "categoria": "Infra",
+  "analisis_riesgo": "",
+  "mitigacion_riesgo": ""
+}
+```
+
+## Proveedor IA: OpenAI (SDK oficial)
+
+La integración está encapsulada en [servicios/servicio_ia.py](servicios/servicio_ia.py) y utiliza el **SDK oficial** de OpenAI.
+
+**Énfasis en endpoints/métodos de OpenAI utilizados:**
+
+- **Responses API** (preferida): `client.responses.create(...)`
+- **Fallback** (compatibilidad): `client.chat.completions.create(...)`
+
+El servicio intenta usar Responses API cuando está disponible en el SDK instalado; si no, usa Chat Completions.
+
+## Configuración (variables de entorno)
+
+Variables requeridas:
+
+- `OPENAI_API_KEY` (obligatoria)
+- `OPENAI_MODEL` (opcional, por defecto: `gpt-4o-mini`)
+
+Este repo incluye:
+
+- [.env.example](.env.example) (plantilla sin secretos)
+- `.env` (archivo local **NO versionado**, debe existir en tu máquina)
+
+## Instalación y ejecución (Windows / PowerShell)
+
+### 1) Crear y activar entorno virtual
+
+Desde la raíz del proyecto:
+
+```powershell
+python -m venv .venv
+```
+
+Para permitir ejecutar scripts en la sesión actual (bypass):
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+```
+
+Activar el entorno virtual:
+
+```powershell
+. .\.venv\Scripts\Activate.ps1
+```
+
+### 2) Instalar dependencias
+
+```powershell
+pip install -r requirements.txt
+```
+
+### 3) Crear `.env` (sin versionar)
+
+Copia la plantilla y pega tu clave:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Edita `.env` y configura:
+
+- `OPENAI_API_KEY=...`
+- `OPENAI_MODEL=gpt-4o-mini` (opcional)
+
+### 4) Ejecutar cargando variables desde `.env`
+
+Opción recomendada (script que carga `.env` en variables **del proceso** y levanta Flask):
+
+```powershell
+.\scripts\ejecutar_con_env.ps1
+```
+
+Si PowerShell bloquea el script, ejecútalo con bypass:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\ejecutar_con_env.ps1
+```
+
+Opción alternativa (sin script):
+
+```powershell
+$env:OPENAI_API_KEY = "PEGA_TU_CLAVE_AQUI"
+$env:OPENAI_MODEL = "gpt-4o-mini"
+python app.py
+```
+
+Servidor local:
+
+- `http://127.0.0.1:5000`
+
+## Pruebas rápidas (PowerShell)
+
+### Categorize
+
+```powershell
+curl -Method POST http://127.0.0.1:5000/ai/tareas/categorize `
+  -ContentType "application/json" `
+  -Body '{"titulo":"Crear endpoint para exportar a CSV","descripcion":"Agregar ruta en Flask y generar archivo CSV","categoria":""}'
+```
+
+### Audit
+
+```powershell
+curl -Method POST http://127.0.0.1:5000/ai/tareas/audit `
+  -ContentType "application/json" `
+  -Body '{"titulo":"Migrar base de datos a nuevo servidor","descripcion":"Mover PostgreSQL a nueva VM y actualizar credenciales","prioridad":"Alta","categoria":"Infra","analisis_riesgo":"","mitigacion_riesgo":""}'
+```
+
+## Evidencias (OpenAI)
+
+Capturas ubicadas en [documentos_OPENAI/](documentos_OPENAI/):
+
+### Configuración de API Key
+
+![Configuración API Key OpenAI](documentos_OPENAI/Configuración_APIKEY_OPENai.jpg)
+
+### Endpoint `/ai/tareas/describe`
+
+![Describe](documentos_OPENAI/endpoint_openai_DESCRIBE.jpg)
+
+### Endpoint `/ai/tareas/categorize`
+
+![Categorize](documentos_OPENAI/endpoint_openai_CATEGORIZE.jpg)
+
+### Endpoint `/ai/tareas/estimate`
+
+![Estimate](documentos_OPENAI/endpoint_openai_ESTIMATE.jpg)
+
+### Endpoint `/ai/tareas/audit`
+
+![Audit](documentos_OPENAI/endpoint_openai_AUDIT.jpg)
 
 ---
 
-## Pruebas rápidas con curl (PowerShell)
-
-> En PowerShell usa `curl.exe` (para evitar el alias de `Invoke-WebRequest`).
-
-GET lista:
-
-```powershell
-curl.exe http://127.0.0.1:5000/tareas
-```
-
-POST crear:
-
-```powershell
-curl.exe -X POST http://127.0.0.1:5000/tareas -H "Content-Type: application/json" -d "{\"titulo\":\"Nueva\",\"descripcion\":\"Desc\",\"prioridad\":\"alta\",\"horas_estimadas\":2,\"estado\":\"pendiente\",\"asignado_a\":\"Guillermo\"}"
-```
-
-PUT actualizar:
-
-```powershell
-curl.exe -X PUT http://127.0.0.1:5000/tareas/1 -H "Content-Type: application/json" -d "{\"titulo\":\"Titulo actualizado\"}"
-```
-
-DELETE eliminar:
-
-```powershell
-curl.exe -X DELETE http://127.0.0.1:5000/tareas/1
-```
-
----
-
-## Evidencias (Postman)
-
-Capturas ubicadas en `documentos/imagenes_postman/`:
-
-### Verificación de la aplicación (GET /)
-![Aplicación en ejecución](documentos/imagenes_postman/aplicacion_en_ejecucion.png)
-
-### GET /tareas
-![GET /tareas](documentos/imagenes_postman/leer_tareas_get.png)
-
-### GET /tareas/<identificador>
-![GET /tareas/<identificador>](documentos/imagenes_postman/leer_tareas_por_identificador_get.png)
-
-### POST /tareas
-![POST /tareas](documentos/imagenes_postman/crear_tarea_post.png)
-
-### PUT /tareas/<identificador>
-![PUT /tareas/<identificador>](documentos/imagenes_postman/actualizar_tarea_put.png)
-
-### DELETE /tareas/<identificador>
-![DELETE /tareas/<identificador>](documentos/imagenes_postman/eliminar_tarea_delete.png)
+Notas:
+- La carpeta [documentos/imagenes_postman/](documentos/imagenes_postman/) contiene evidencias del CRUD (Entregable 1).
+- Por seguridad, no subas `.env` al repositorio.

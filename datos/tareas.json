@@ -34,5 +34,14 @@
         "horas_estimadas": 2.5,
         "estado": "pendiente",
         "asignado_a": "Guillermo"
+    },
+    {
+        "identificador": "7",
+        "titulo": "Tarea 10",
+        "descripcion": "Análisis de pesos",
+        "prioridad": "alta",
+        "horas_estimadas": 10,
+        "estado": "Finalizado",
+        "asignado_a": "Nassir Ramírez Villanueva"
     }
 ]

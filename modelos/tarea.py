@@ -15,6 +15,11 @@ Campos del modelo:
 - horas_estimadas
 - estado
 - asignado_a
+
+Campos nuevos (Entregable 2 - IA):
+- categoria
+- analisis_riesgo
+- mitigacion_riesgo
 """
 
 from __future__ import annotations
@@ -39,6 +44,9 @@ class Tarea:
 		horas_estimadas: float,
 		estado: str,
 		asignado_a: str,
+		categoria: str | None = None,
+		analisis_riesgo: str | None = None,
+		mitigacion_riesgo: str | None = None,
 	) -> None:
 		"""Inicializa una instancia de `Tarea`.
 
@@ -50,6 +58,9 @@ class Tarea:
 		- horas_estimadas: número de horas estimadas para completar la tarea.
 		- estado: estado actual (por ejemplo: pendiente, en_progreso, completada).
 		- asignado_a: usuario responsable de la tarea.
+		- categoria: categoría de la tarea (opcional).
+		- analisis_riesgo: análisis de riesgo (opcional).
+		- mitigacion_riesgo: mitigación del riesgo (opcional).
 		"""
 		# Guardamos cada campo en la instancia.
 		# No se implementan validaciones avanzadas en este paso.
@@ -60,6 +71,9 @@ class Tarea:
 		self.horas_estimadas = horas_estimadas
 		self.estado = estado
 		self.asignado_a = asignado_a
+		self.categoria = categoria
+		self.analisis_riesgo = analisis_riesgo
+		self.mitigacion_riesgo = mitigacion_riesgo
 
 	def a_diccionario(self) -> dict[str, Any]:
 		"""Convierte la tarea a un diccionario.
@@ -79,6 +93,9 @@ class Tarea:
 			"horas_estimadas": self.horas_estimadas,
 			"estado": self.estado,
 			"asignado_a": self.asignado_a,
+			"categoria": self.categoria,
+			"analisis_riesgo": self.analisis_riesgo,
+			"mitigacion_riesgo": self.mitigacion_riesgo,
 		}
 
 	@staticmethod
@@ -104,4 +121,17 @@ class Tarea:
 			horas_estimadas=float(diccionario_tarea["horas_estimadas"]),
 			estado=str(diccionario_tarea["estado"]),
 			asignado_a=str(diccionario_tarea["asignado_a"]),
+			categoria=(
+				str(diccionario_tarea["categoria"]) if "categoria" in diccionario_tarea else None
+			),
+			analisis_riesgo=(
+				str(diccionario_tarea["analisis_riesgo"])
+				if "analisis_riesgo" in diccionario_tarea
+				else None
+			),
+			mitigacion_riesgo=(
+				str(diccionario_tarea["mitigacion_riesgo"])
+				if "mitigacion_riesgo" in diccionario_tarea
+				else None
+			),
 		)

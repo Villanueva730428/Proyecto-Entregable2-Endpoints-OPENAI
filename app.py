@@ -12,6 +12,7 @@ Este archivo:
 
 from flask import Flask, jsonify
 
+from rutas.rutas_ai import plano_rutas_ai
 from rutas.rutas_tareas import plano_rutas_tareas
 
 
@@ -20,6 +21,9 @@ aplicacion = Flask(__name__)
 
 # Registro del Blueprint que contiene el endpoint GET /tareas.
 aplicacion.register_blueprint(plano_rutas_tareas)
+
+# Registro del Blueprint de IA (Entregable 2).
+aplicacion.register_blueprint(plano_rutas_ai)
 
 
 @aplicacion.get("/")
