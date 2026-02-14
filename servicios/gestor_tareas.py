@@ -22,11 +22,16 @@ Responsabilidades:
 Notas:
 - Se usan rutas relativas robustas basadas en la ubicación del archivo (pathlib).
 - Si el JSON está vacío o es inválido, se devuelve una lista vacía sin romper la app.
+
+Variables de entorno:
+- TAREAS_JSON_PATH (opcional): ruta a un JSON alternativo para persistencia.
+	Útil para tests (evita tocar datos/tareas.json) o para ejecutar en modo aislado.
 """
 
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -43,6 +48,11 @@ class GestorTareas:
 		Se calcula de forma robusta a partir de la ubicación del archivo actual:
 		- servicios/gestor_tareas.py -> raíz del proyecto -> datos/tareas.json
 		"""
+		# Permite override para tests/entornos aislados (sin tocar datos/tareas.json real).
+		ruta_override = os.getenv("TAREAS_JSON_PATH")
+		if isinstance(ruta_override, str) and ruta_override.strip() != "":
+			return Path(ruta_override).expanduser().resolve()
+
 		# `__file__` apunta a este archivo; subimos a la raíz del proyecto.
 		ruta_raiz_proyecto = Path(__file__).resolve().parent.parent
 		return ruta_raiz_proyecto / "datos" / "tareas.json"

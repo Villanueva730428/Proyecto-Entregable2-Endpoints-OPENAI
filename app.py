@@ -16,20 +16,30 @@ from rutas.rutas_ai import plano_rutas_ai
 from rutas.rutas_tareas import plano_rutas_tareas
 
 
-# Instancia principal de la aplicación Flask.
-aplicacion = Flask(__name__)
+def crear_aplicacion() -> Flask:
+	"""Crea y configura la aplicación Flask.
 
-# Registro del Blueprint que contiene el endpoint GET /tareas.
-aplicacion.register_blueprint(plano_rutas_tareas)
+	Se expone como factory para permitir tests con `pytest` sin necesidad de
+	levantar un servidor real.
+	"""
+	aplicacion = Flask(__name__)
 
-# Registro del Blueprint de IA (Entregable 2).
-aplicacion.register_blueprint(plano_rutas_ai)
+	# Registro del Blueprint que contiene endpoints CRUD.
+	aplicacion.register_blueprint(plano_rutas_tareas)
+
+	# Registro del Blueprint de IA (Entregable 2).
+	aplicacion.register_blueprint(plano_rutas_ai)
+
+	@aplicacion.get("/")
+	def inicio():
+		"""Ruta raíz opcional para verificar que la app está levantada."""
+		return jsonify({"estado": "aplicacion_en_ejecucion"}), 200
+
+	return aplicacion
 
 
-@aplicacion.get("/")
-def inicio():
-	"""Ruta raíz opcional para verificar que la app está levantada."""
-	return jsonify({"estado": "aplicacion_en_ejecucion"}), 200
+# Instancia principal de la aplicación Flask (compatibilidad con ejecución directa).
+aplicacion = crear_aplicacion()
 
 
 if __name__ == "__main__":

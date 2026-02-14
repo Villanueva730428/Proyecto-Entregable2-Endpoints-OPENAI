@@ -2,11 +2,13 @@
 
 Este módulo define el Blueprint para endpoints de IA del Entregable 2.
 
-Restricciones de este paso:
+Restricciones:
 - Implementar únicamente endpoints /ai/tareas/* del Entregable 2.
 - No persistir tareas.
 - No modificar el CRUD existente.
-- No usar proveedores reales de IA.
+
+Nota:
+- La integración con el proveedor de IA está encapsulada en `servicios/servicio_ia.py`.
 """
 
 from __future__ import annotations

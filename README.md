@@ -335,6 +335,111 @@ Servidor local:
 
 - `http://127.0.0.1:5000`
 
+## Modificaciones realizdas 14 de febrero 2026
+
+Esta sección documenta los cambios realizados para mejorar la **testabilidad**, la **organización** y la **trazabilidad** del proyecto, manteniendo el comportamiento de la API.
+
+### 1) App Factory para facilitar pruebas automatizadas
+
+Se agregó una función factory `crear_aplicacion()` para construir la app Flask en un entorno de tests sin levantar un servidor real.
+
+Fragmento (app.py):
+
+```python
+def crear_aplicacion() -> Flask:
+  aplicacion = Flask(__name__)
+  aplicacion.register_blueprint(plano_rutas_tareas)
+  aplicacion.register_blueprint(plano_rutas_ai)
+
+  @aplicacion.get("/")
+  def inicio():
+    return jsonify({"estado": "aplicacion_en_ejecucion"}), 200
+
+  return aplicacion
+
+
+aplicacion = crear_aplicacion()
+```
+
+Explicación:
+- `pytest` puede importar `crear_aplicacion()` y usar `aplicacion.test_client()`.
+- Se mantiene compatibilidad con `python app.py` mediante la instancia global `aplicacion`.
+
+### 2) Persistencia configurable para ejecutar tests sin tocar datos reales
+
+Se agregó una variable de entorno opcional `TAREAS_JSON_PATH` para redirigir la persistencia a un archivo JSON alternativo durante tests.
+
+Fragmento (servicios/gestor_tareas.py):
+
+```python
+ruta_override = os.getenv("TAREAS_JSON_PATH")
+if isinstance(ruta_override, str) and ruta_override.strip() != "":
+  return Path(ruta_override).expanduser().resolve()
+```
+
+Explicación:
+- En ejecución normal, la app sigue usando `datos/tareas.json`.
+- En tests, se configura `TAREAS_JSON_PATH` a un archivo temporal (por ejemplo con `tmp_path`).
+
+### 3) Suite de tests con pytest (sin llamadas reales a OpenAI)
+
+Se creó una carpeta `tests/` con:
+- tests de `GET /` (healthcheck),
+- tests del CRUD completo (`/tareas`),
+- tests de endpoints IA (`/ai/*`) usando mocks, evitando depender de red o credenciales.
+
+Fragmento (tests/conftest.py):
+
+```python
+@pytest.fixture()
+def ruta_tareas_temporal(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+  ruta = tmp_path / "tareas.json"
+  ruta.write_text("[]", encoding="utf-8")
+  monkeypatch.setenv("TAREAS_JSON_PATH", str(ruta))
+  return ruta
+```
+
+Fragmento (tests/test_ai_endpoints.py):
+
+```python
+import rutas.rutas_ai as rutas_ai
+monkeypatch.setattr(rutas_ai, "obtener_categoria_simulada", lambda titulo, descripcion=None: "Backend")
+```
+
+Explicación:
+- Los endpoints IA se prueban validando el contrato del JSON, pero reemplazando la llamada real por funciones mock.
+
+### 4) Mensajes de error IA más informativos (sin exponer secretos)
+
+Se mejoró el `RuntimeError` envolvente para incluir una pista según el `status_code` (por ejemplo 401 para API key inválida).
+
+Fragmento (servicios/servicio_ia.py):
+
+```python
+status_code = getattr(excepcion, "status_code", None)
+if status_code == 401:
+  mensaje_extra = " (401: autenticación fallida; revisa OPENAI_API_KEY)"
+raise RuntimeError(f"Error al consultar el proveedor de IA{mensaje_extra}") from excepcion
+```
+
+Explicación:
+- Se mantiene el mensaje general, pero se agrega contexto útil para diagnóstico.
+- No se imprime ni registra la API key.
+
+### 5) Cómo ejecutar los tests
+
+1) Instalar dependencias de desarrollo:
+
+```powershell
+pip install -r requirements-dev.txt
+```
+
+2) Ejecutar la suite:
+
+```powershell
+pytest -q
+```
+
 ## Pruebas rápidas (PowerShell)
 
 ### Categorize
@@ -351,6 +456,20 @@ curl -Method POST http://127.0.0.1:5000/ai/tareas/categorize `
 curl -Method POST http://127.0.0.1:5000/ai/tareas/audit `
   -ContentType "application/json" `
   -Body '{"titulo":"Migrar base de datos a nuevo servidor","descripcion":"Mover PostgreSQL a nueva VM y actualizar credenciales","prioridad":"Alta","categoria":"Infra","analisis_riesgo":"","mitigacion_riesgo":""}'
+```
+
+## Tests (pytest)
+
+Instalar dependencias de desarrollo:
+
+```powershell
+pip install -r requirements-dev.txt
+```
+
+Ejecutar tests:
+
+```powershell
+pytest -q
 ```
 
 ## Evidencias (OpenAI)

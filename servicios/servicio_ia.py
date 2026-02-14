@@ -93,7 +93,19 @@ def _consultar_openai(texto_sistema: str, texto_usuario: str, temperatura: float
 	except ValueError:
 		raise
 	except Exception as excepcion:
-		raise RuntimeError("Error al consultar el proveedor de IA") from excepcion
+		status_code = getattr(excepcion, "status_code", None)
+		codigo = getattr(excepcion, "code", None)
+		mensaje_extra = ""
+		if status_code == 401:
+			mensaje_extra = " (401: autenticación fallida; revisa OPENAI_API_KEY)"
+		elif status_code == 404:
+			mensaje_extra = " (404: modelo no encontrado; revisa OPENAI_MODEL)"
+		elif status_code == 429:
+			mensaje_extra = " (429: rate limit/cuota; revisa límites y facturación)"
+		elif isinstance(codigo, str) and codigo.strip() != "":
+			mensaje_extra = f" (código: {codigo.strip()})"
+
+		raise RuntimeError(f"Error al consultar el proveedor de IA{mensaje_extra}") from excepcion
 
 
 def _normalizar_categoria(texto: str, categorias_permitidas: list[str]) -> str:
